@@ -1,3 +1,10 @@
+## <small>0.0.3 (2024-11-22)</small>
+
+* style: 💄 fixed code style ([884d3f8](https://github.com/mjancarik/esmj-task/commit/884d3f8))
+* feat: 🎸 allow for effect define signal options ([71e97a4](https://github.com/mjancarik/esmj-task/commit/71e97a4))
+
+
+
 ## <small>0.0.2 (2024-11-13)</small>
 
 * ci: 🎡 fix test command ([c3451db](https://github.com/mjancarik/esmj-task/commit/c3451db))
