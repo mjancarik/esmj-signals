@@ -103,10 +103,12 @@ let w = null;
 function createWatcher(notify) {
   w = new Watcher(notify);
 }
-
+let timer = null;
 createWatcher(() => {
   // TODO performance improvement
-  setTimeout(() => {
+
+  clearTimeout(timer);
+  timer = setTimeout(() => {
     getPending().forEach((pending) => {
       pending.get();
     });
