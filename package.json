@@ -20,7 +20,7 @@
   "typings": "dist/index.d.ts",
   "scripts": {
     "lint:cmd": "eslint -c ./.eslintrc.js --ignore-path ./.prettierignore  --no-eslintrc",
-    "lint": "npm run lint:cmd -- 'src/**/*.ts'",
+    "lint": "npm run lint:cmd -- 'src/**/*.js'",
     "lint:fix": "npm run lint -- --fix",
     "dev": "node_modules/.bin/tsup --dts --watch --onSuccess 'node ./dist/index.mjs'",
     "test": "node --test",

@@ -25,9 +25,16 @@ class Watcher extends Observable {
 
     this.pipe((observable) => {
       const originalSubscribe = observable.subscribe.bind(observable);
+      const originalUnsubscribe = observable.unsubscribe.bind(observable);
+
       observable.subscribe = (observer) => {
         originalSubscribe(observer);
         this.#pendings.add(observer);
+      };
+
+      observable.unsubscribe = (observer) => {
+        originalUnsubscribe(observer);
+        this.#pendings.delete(observer);
       };
 
       return observable;
@@ -38,6 +45,8 @@ class Watcher extends Observable {
     if (typeof signal.next !== 'function') {
       signal.next = () => {
         return untrack(() => {
+          this.#pendings.add(signal);
+
           this.#notify();
         });
       };
@@ -52,6 +61,8 @@ class Watcher extends Observable {
       const originalNext = signal.next.bind(signal);
       signal.next = () => {
         return untrack(() => {
+          this.#pendings.add(signal);
+
           originalNext();
 
           this.#notify();
@@ -64,7 +75,20 @@ class Watcher extends Observable {
   }
 
   getPending() {
-    return Array.from(this.#pendings);
+    const pendings = Array.from(this.#pendings).map((pending) => {
+      const originalGet = pending.get.bind(pending);
+
+      pending.get = () => {
+        return untrack(() => {
+          this.#pendings.delete(pending);
+          return originalGet();
+        });
+      };
+
+      return pending;
+    });
+
+    return pendings;
   }
 
   unwatch(signal) {
@@ -84,9 +108,7 @@ createWatcher(() => {
   // TODO performance improvement
   setTimeout(() => {
     getPending().forEach((pending) => {
-      untrack(() => {
-        pending.get();
-      });
+      pending.get();
     });
   }, 0);
 });
@@ -116,6 +138,8 @@ class Computed extends Observer {
 
     this.#callback = callback;
     this.#options = options;
+
+    this.debug = options?.debug;
 
     this.get = this.get.bind(this);
   }
@@ -208,7 +232,7 @@ function computed(callback, options) {
   return instance;
 }
 
-function effect(callback) {
+function effect(callback, options) {
   let destructor;
 
   let c = computed(
@@ -216,7 +240,7 @@ function effect(callback) {
       destructor?.();
       destructor = callback();
     },
-    { equals: () => false },
+    { equals: () => false, debug: 'effect', ...options },
   );
   c.get();
 

@@ -8,6 +8,7 @@ import {
   getPending,
   untrack,
   watch,
+  unwatch,
 } from '../index.mjs';
 
 describe('Reactive package', () => {
@@ -132,6 +133,8 @@ describe('Reactive package', () => {
         2,
         'computed2 is recomputed after get',
       );
+
+      unwatch(computed2);
     });
 
     it('should re-throw error if computed signal catch error', () => {
@@ -175,7 +178,10 @@ describe('Reactive package', () => {
   });
 
   describe('effect', () => {
-    it('should be reactive for signals and computed signals', (t) => {
+    it('should be reactive for signals and computed signals', async (t) => {
+      const delay = (ms = 1) =>
+        new Promise((resolve) => setTimeout(resolve, ms));
+
       const signal1 = state(0);
       const signal2 = state(1);
       const destructor = t.mock.fn(() => {});
@@ -201,11 +207,13 @@ describe('Reactive package', () => {
       signal1.set(1);
       assert.equal(stubSomeEffect.mock?.calls.length, 1);
 
-      getPending().forEach((pending) => {
-        untrack(() => {
-          pending.get();
-        });
+      let pending = getPending();
+
+      assert.equal(pending.length, 1, 'iteration one: pending should be one');
+      pending.forEach((pending) => {
+        pending.get();
       });
+      await delay();
 
       assert.equal(
         destructor.mock?.calls.length,
@@ -216,6 +224,88 @@ describe('Reactive package', () => {
         stubSomeEffect.mock?.calls.length,
         2,
         'effect should be called 2 times (one init, one recomputed)',
+      );
+
+      // Two iteration
+      signal2.set(3);
+      assert.equal(stubSomeEffect.mock?.calls.length, 2);
+
+      signal1.set(2);
+      assert.equal(stubSomeEffect.mock?.calls.length, 2);
+
+      pending = getPending();
+
+      assert.equal(pending.length, 1, 'iteration two: pending should be one');
+      pending.forEach((pending) => {
+        untrack(() => {
+          pending.get();
+        });
+      });
+      await delay();
+
+      assert.equal(
+        destructor.mock?.calls.length,
+        2,
+        'effect destructor should be called twice)',
+      );
+      assert.equal(
+        stubSomeEffect.mock?.calls.length,
+        3,
+        'effect should be called 2 times (one init, two recomputed)',
+      );
+
+      // Three iteration
+      pending = getPending();
+
+      assert.equal(
+        pending.length,
+        0,
+        'iteration three: pending should be zero',
+      );
+      pending.forEach((pending) => {
+        untrack(() => {
+          pending.get();
+        });
+      });
+      await delay();
+
+      assert.equal(
+        destructor.mock?.calls.length,
+        2,
+        'effect destructor should be called twice',
+      );
+      assert.equal(
+        stubSomeEffect.mock?.calls.length,
+        3,
+        'effect should be called 2 times (one init, two recomputed)',
+      );
+
+      // Fourth iteration
+      signal1.set(10);
+
+      pending = getPending();
+
+      assert.equal(
+        pending.length,
+        1,
+        'iteration fourth: pending should be zero',
+      );
+      pending.forEach((pending) => {
+        untrack(() => {
+          pending.get();
+        });
+      });
+      await delay();
+
+      assert.equal(
+        destructor.mock?.calls.length,
+        3,
+        'effect destructor should be called three times',
+      );
+      assert.equal(
+        stubSomeEffect.mock?.calls.length,
+        4,
+        'effect should be called 2 times (one init, three recomputed)',
       );
     });
   });
