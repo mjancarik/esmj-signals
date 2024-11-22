@@ -184,7 +184,7 @@ describe('Reactive package', () => {
 
       const signal1 = state(0);
       const signal2 = state(1);
-      const destructor = t.mock.fn(() => {});
+      const destructor = t.mock.fn(() => {}); // eslint-disable-line @typescript-eslint/no-empty-function
 
       const computedSignal = computed(() => signal1.get() + signal2.get(), {
         debug: 'computedSignal',
