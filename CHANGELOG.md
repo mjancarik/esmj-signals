@@ -1,3 +1,9 @@
+## <small>0.0.4 (2024-11-22)</small>
+
+* fix: 🐛 effect multi notification ([dba5fc1](https://github.com/mjancarik/esmj-task/commit/dba5fc1))
+
+
+
 ## <small>0.0.3 (2024-11-22)</small>
 
 * style: 💄 fixed code style ([884d3f8](https://github.com/mjancarik/esmj-task/commit/884d3f8))
