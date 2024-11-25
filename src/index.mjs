@@ -12,7 +12,7 @@ function untrack(callback) {
 }
 
 const INTERNAL_OBSERVABLE = Symbol('internal observable');
-const ORIGINAL_NEXT = Symbol('original next');
+const ORIGINAL_FUNCTION = Symbol('original function');
 
 class Watcher extends Observable {
   #pendings = new Set();
@@ -50,13 +50,13 @@ class Watcher extends Observable {
           this.#notify();
         });
       };
-      signal.next[ORIGINAL_NEXT] = undefined;
+      signal.next[ORIGINAL_FUNCTION] = undefined;
     }
 
     // WATCH Computed
     if (
       signal instanceof Computed &&
-      signal.next[ORIGINAL_NEXT] === undefined
+      signal.next[ORIGINAL_FUNCTION] === undefined
     ) {
       const originalNext = signal.next.bind(signal);
       signal.next = () => {
@@ -68,7 +68,7 @@ class Watcher extends Observable {
           this.#notify();
         });
       };
-      signal.next[ORIGINAL_NEXT] = originalNext;
+      signal.next[ORIGINAL_FUNCTION] = originalNext;
     }
 
     return this.subscribe(signal);
@@ -76,14 +76,18 @@ class Watcher extends Observable {
 
   getPending() {
     const pendings = Array.from(this.#pendings).map((pending) => {
-      const originalGet = pending.get.bind(pending);
+      if (!pending.get[ORIGINAL_FUNCTION]) {
+        const originalGet = pending.get.bind(pending);
 
-      pending.get = () => {
-        return untrack(() => {
-          this.#pendings.delete(pending);
-          return originalGet();
-        });
-      };
+        pending.get = () => {
+          return untrack(() => {
+            this.#pendings.delete(pending);
+            return originalGet();
+          });
+        };
+
+        pending.get[ORIGINAL_FUNCTION] = originalGet;
+      }
 
       return pending;
     });
@@ -92,7 +96,8 @@ class Watcher extends Observable {
   }
 
   unwatch(signal) {
-    signal.next = signal.next[ORIGINAL_NEXT];
+    signal.next = signal.next[ORIGINAL_FUNCTION];
+    signal.get = signal.get[ORIGINAL_FUNCTION];
 
     return this.unsubscribe(signal);
   }
@@ -106,7 +111,6 @@ function createWatcher(notify) {
 let timer = null;
 createWatcher(() => {
   // TODO performance improvement
-
   clearTimeout(timer);
   timer = setTimeout(() => {
     getPending().forEach((pending) => {
