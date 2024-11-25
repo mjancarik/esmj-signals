@@ -1,3 +1,9 @@
+## <small>0.0.5 (2024-11-25)</small>
+
+* fix: 🐛 multi overriding getter ([749b14b](https://github.com/mjancarik/esmj-task/commit/749b14b))
+
+
+
 ## <small>0.0.4 (2024-11-22)</small>
 
 * fix: 🐛 effect multi notification ([dba5fc1](https://github.com/mjancarik/esmj-task/commit/dba5fc1))
