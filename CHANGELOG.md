@@ -1,3 +1,9 @@
+## <small>0.1.2 (2026-02-28)</small>
+
+* ci: 🎡 update node version ([fa00bc5](https://github.com/mjancarik/esmj-task/commit/fa00bc5))
+
+
+
 ## <small>0.1.1 (2026-02-28)</small>
 
 * feat: 🎸 udpate versions ([6221872](https://github.com/mjancarik/esmj-task/commit/6221872))
