@@ -336,10 +336,15 @@ function effect(callback, options) {
   c.get();
 
   watch(c);
-  return () => {
+
+  const dispose = () => {
     destructor?.();
     unwatch(c);
   };
+
+  dispose[Symbol.dispose] = dispose;
+
+  return dispose;
 }
 
 function createSignal(value, options = {}) {

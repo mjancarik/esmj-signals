@@ -122,6 +122,22 @@ count.set(2);
 // (nothing logged)
 ```
 
+#### Explicit Resource Management (`using`)
+
+The dispose function supports [`Symbol.dispose`](https://github.com/tc39/proposal-explicit-resource-management), enabling automatic cleanup with the `using` keyword:
+
+```javascript
+{
+  using dispose = effect(() => {
+    console.log('Count is:', count.get());
+  });
+
+  count.set(1);
+  // effect is active
+}
+// ← effect automatically disposed when block exits
+```
+
 #### Cleanup / Destructor
 
 If the effect callback returns a function, it will be called before each re-execution and on disposal:
