@@ -154,16 +154,18 @@ function unwatch(signal) {
   return w.unwatch(signal);
 }
 
+const NO_ERROR = Symbol('no error');
+
 class Computed extends Observer {
   #dirty = true;
   #running = false;
-  #prevContext = null;
   #signal = null;
   #context = this.#createNewContext();
   #callback = null;
   #options = null;
   #revision = 0;
   #sourceRevisions = new Map();
+  #error = NO_ERROR;
 
   constructor(callback, options) {
     super();
@@ -193,23 +195,12 @@ class Computed extends Observer {
     return context;
   }
 
-  #savePrevContext() {
-    this.#prevContext = context;
-    context = this.#context;
-  }
-
-  #restorePrevContext() {
-    context = this.#prevContext;
-  }
-
   getRevision() {
     return this.#revision;
   }
 
   #needsRecompute() {
     for (const [source, savedRevision] of this.#sourceRevisions) {
-      // If source is a Computed, recursively validate it first (pull-based).
-      // Use untrack to avoid context-tracking side effects during validation.
       if (source instanceof Computed) {
         untrack(() => source.get());
       }
@@ -236,19 +227,21 @@ class Computed extends Observer {
       this.#signal = createSignal(this.#run(), this.#options);
     }
 
-    if (this.#dirty) {
+    if (this.#dirty || this.#error !== NO_ERROR) {
       if (this.#sourceRevisions.size === 0 || this.#needsRecompute()) {
         unwatch(this);
         this.#run();
       } else {
-        // False alarm from diamond — sources didn't actually change
         this.#dirty = false;
       }
     }
 
-    // Track this Computed as a source in the parent context
-    if (typeof context === 'object' && context !== null) {
+    if (context) {
       context.sourceRevisions.set(this, this.#revision);
+    }
+
+    if (this.#error !== NO_ERROR) {
+      throw this.#error;
     }
 
     return this.#signal.get();
@@ -259,7 +252,7 @@ class Computed extends Observer {
       this.#signal = createSignal(this.#run(), this.#options);
     }
 
-    if (this.#dirty) {
+    if (this.#dirty || this.#error !== NO_ERROR) {
       if (this.#sourceRevisions.size === 0 || this.#needsRecompute()) {
         unwatch(this);
         this.#run();
@@ -268,50 +261,52 @@ class Computed extends Observer {
       }
     }
 
+    if (this.#error !== NO_ERROR) {
+      throw this.#error;
+    }
+
     return this.#signal.peek();
   }
 
   #run() {
     this.#running = true;
     this.#dirty = false;
+    this.#error = NO_ERROR;
 
     this.#clearContextDependencies();
     this.#context.sourceRevisions.clear();
-    this.#savePrevContext();
+
+    const prevContext = context;
+    context = this.#context;
 
     let result;
     try {
       result = this.#callback();
     } catch (e) {
-      result = e;
+      this.#error = e;
     }
 
-    this.#restorePrevContext();
+    context = prevContext;
     this.#sourceRevisions = this.#context.sourceRevisions;
     this.#context.sourceRevisions = new Map();
     this.#running = false;
 
-    // todo test it
     if (result instanceof Promise) {
       result = result
         .then((value) => {
+          this.#error = NO_ERROR;
           this.#signal.set(value);
         })
         .catch((e) => {
-          this.#signal.set(e);
+          this.#error = e;
         });
     }
 
-    if (this.#signal) {
+    if (this.#error === NO_ERROR && this.#signal) {
       this.#signal.set(result);
     }
 
-    // Increment revision so downstream computeds can detect the change
     this.#revision++;
-
-    if (result instanceof Error) {
-      throw result;
-    }
 
     return result;
   }
@@ -353,28 +348,19 @@ function createSignal(value, options = {}) {
 
   const observable = new Observable();
   function get() {
-    if (typeof context === 'object' && context !== null) {
+    if (context) {
       context.dependencies.set(
         observable,
         observable.subscribe(context.observer),
       );
 
-      // Track this signal as a source in the current context
       context.sourceRevisions.set(signal, revision);
-    }
-
-    if (value instanceof Error) {
-      throw value;
     }
 
     return value;
   }
 
   function peek() {
-    if (value instanceof Error) {
-      throw value;
-    }
-
     return value;
   }
 

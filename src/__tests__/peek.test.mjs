@@ -74,10 +74,10 @@ describe('peek', () => {
       assert.equal(s.peek(), 3);
     });
 
-    it('should throw if value is an Error', () => {
+    it('should not throw if value is an Error', () => {
       const s = state(new Error('broken'));
 
-      assert.throws(() => s.peek(), { message: 'broken' });
+      assert.equal(s.peek().message, 'broken');
     });
   });
 

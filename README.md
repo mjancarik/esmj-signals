@@ -350,9 +350,16 @@ createWatcher(() => {
 
 ## Error Handling
 
-Errors thrown in `computed` callbacks are captured and re-thrown on `.get()`:
+Errors in `computed` callbacks are captured and re-thrown on `.get()` or `.peek()`. The error state is tracked separately from the value, so **state signals can hold `Error` objects as legitimate values**:
 
 ```javascript
+import { state, computed } from '@esmj/signals';
+
+// State signals can store Error objects — they are values, not errors
+const validationError = state(new Error('field required'));
+validationError.get(); // Error { message: 'field required' } — returned, not thrown
+
+// Computed signals throw when their callback throws
 const a = state(0);
 const safe = computed(() => {
   if (a.get() === 0) {
@@ -367,8 +374,27 @@ try {
   console.log(e.message); // 'Cannot be zero'
 }
 
+// Recovers when dependency changes
 a.set(5);
 safe.get(); // 20
+```
+
+Errors propagate through computed chains:
+
+```javascript
+const source = state(0);
+const a = computed(() => {
+  if (source.get() === 0) throw new Error('bad');
+  return source.get() * 2;
+});
+const b = computed(() => a.get() + 10);
+
+try {
+  b.get(); // throws 'bad' — propagated from a
+} catch (e) {}
+
+source.set(5);
+b.get(); // 20 — recovered
 ```
 
 ### Cycle Detection
