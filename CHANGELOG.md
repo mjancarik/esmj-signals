@@ -1,3 +1,17 @@
+## 0.1.0 (2026-02-28)
+
+* docs: ✏️ update documentation ([e1aadca](https://github.com/mjancarik/esmj-task/commit/e1aadca))
+* feat: 🎸 add batch feature ([a7db288](https://github.com/mjancarik/esmj-task/commit/a7db288))
+* feat: 🎸 add new onFlush and afterFlush methods ([698f75f](https://github.com/mjancarik/esmj-task/commit/698f75f))
+* feat: 🎸 add peek method ([317820b](https://github.com/mjancarik/esmj-task/commit/317820b))
+* feat: 🎸 add Symbol.dispose support ([b6d8db6](https://github.com/mjancarik/esmj-task/commit/b6d8db6))
+* feat: 🎸 add Topological sorting ([20be1a3](https://github.com/mjancarik/esmj-task/commit/20be1a3))
+* feat: 🎸 allow store Error value in signal ([8b8a363](https://github.com/mjancarik/esmj-task/commit/8b8a363))
+* feat: 🎸 detect cycle signals ([ea00fdf](https://github.com/mjancarik/esmj-task/commit/ea00fdf))
+* feat: 🎸 improve dispose watcher memory ([89c5d63](https://github.com/mjancarik/esmj-task/commit/89c5d63))
+
+
+
 ## <small>0.0.5 (2024-11-25)</small>
 
 * fix: 🐛 multi overriding getter ([749b14b](https://github.com/mjancarik/esmj-task/commit/749b14b))
