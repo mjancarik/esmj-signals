@@ -1,3 +1,9 @@
+## <small>0.1.1 (2026-02-28)</small>
+
+* feat: 🎸 udpate versions ([6221872](https://github.com/mjancarik/esmj-task/commit/6221872))
+
+
+
 ## 0.1.0 (2026-02-28)
 
 * docs: ✏️ update documentation ([e1aadca](https://github.com/mjancarik/esmj-task/commit/e1aadca))
