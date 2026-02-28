@@ -330,22 +330,138 @@ unwatch(c);
 
 ### `createWatcher(notify)`
 
-Creates a custom watcher with a custom notification strategy. Replaces the default watcher (which uses `setTimeout`).
+Creates a custom watcher with a custom notification strategy. Replaces the default watcher (which uses `queueMicrotask`).
 
 ```javascript
 import { createWatcher, getPending } from '@esmj/signals';
 
 // Synchronous flush strategy
 createWatcher(() => {
-  getPending().forEach((pending) => pending.get());
+  for (const pending of getPending()) {
+    pending.get();
+  }
 });
 
-// Or microtask-based strategy
+// Or requestAnimationFrame-based strategy for UI
 createWatcher(() => {
-  queueMicrotask(() => {
-    getPending().forEach((pending) => pending.get());
+  requestAnimationFrame(() => {
+    for (const pending of getPending()) {
+      pending.get();
+    }
   });
 });
+```
+
+### `onFlush(callback)`
+
+Registers a one-shot callback that runs **once** after the next flush cycle completes (i.e. after all pending effects have run). Useful for DOM measurements, post-update coordination, or any work that depends on effects being settled.
+
+```javascript
+import { state, effect, onFlush } from '@esmj/signals';
+
+const count = state(0);
+
+effect(() => {
+  document.title = `Count: ${count.get()}`;
+});
+
+count.set(42);
+
+onFlush(() => {
+  // DOM is now updated — safe to measure
+  console.log(document.title); // "Count: 42"
+});
+```
+
+Multiple callbacks are supported and run in registration order:
+
+```javascript
+onFlush(() => console.log('first'));
+onFlush(() => console.log('second'));
+// After flush: "first", "second"
+```
+
+Callbacks are one-shot — they do not persist across flush cycles:
+
+```javascript
+onFlush(() => console.log('once'));
+
+count.set(1);
+// after flush: logs "once"
+
+count.set(2);
+// after flush: (nothing — callback was cleared)
+```
+
+### `afterFlush()`
+
+Returns a promise that resolves after the next flush cycle completes. A convenience wrapper around `onFlush`. Especially useful in async code and tests:
+
+```javascript
+import { state, effect, afterFlush } from '@esmj/signals';
+
+const count = state(0);
+
+effect(() => {
+  console.log(count.get());
+});
+
+count.set(42);
+
+await afterFlush();
+// All effects have run, all side effects settled
+```
+
+Works seamlessly with `batch`:
+
+```javascript
+import { state, effect, batch, afterFlush } from '@esmj/signals';
+
+const a = state(1);
+const b = state(2);
+let sum = null;
+
+effect(() => {
+  sum = a.get() + b.get();
+});
+
+batch(() => {
+  a.set(10);
+  b.set(20);
+});
+
+await afterFlush();
+console.log(sum); // 30
+```
+
+## Flush Strategy
+
+Effects are scheduled to run via `queueMicrotask` after signal updates. This means they run **before the next paint** but **after the current synchronous code finishes**:
+
+```javascript
+const count = state(0);
+let logged = null;
+
+effect(() => {
+  logged = count.get();
+});
+// logged === 0
+
+count.set(1);
+// logged === 0 (microtask hasn't run yet)
+
+await afterFlush();
+// logged === 1 (microtask ran)
+```
+
+Multiple `set()` calls are coalesced — the effect runs only once:
+
+```javascript
+count.set(1);
+count.set(2);
+count.set(3);
+await afterFlush();
+// effect ran once with count === 3
 ```
 
 ## Error Handling
@@ -445,6 +561,8 @@ This library follows the API shape and semantics of the [TC39 Signals proposal](
 | `unwatch` | Unregister a signal from the watcher |
 | `getPending` | Get pending signals |
 | `createWatcher` | Create a custom watcher |
+| `onFlush` | Register a one-shot post-flush callback |
+| `afterFlush` | Returns a promise that resolves after flush |
 
 ## License
 
