@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { state, computed, effect, batch } from '../index.mjs';
+import { state, computed, effect, batch, afterFlush } from '../index.mjs';
 
 describe('batch', () => {
   it('should delay signal notifications until batch ends', () => {
@@ -60,7 +60,7 @@ describe('batch', () => {
     assert.equal(computeCount, 1);
   });
 
-  it('should work with effects inside batch', (_, done) => {
+  it('should work with effects inside batch', async () => {
     const a = state(1);
     const b = state(2);
     let effectCount = 0;
@@ -80,12 +80,9 @@ describe('batch', () => {
       b.set(20);
     });
 
-    // Effect is async (setTimeout), so wait a tick
-    setTimeout(() => {
-      assert.ok(effectCount >= 1, 'effect should have run at least once');
-      dispose();
-      done();
-    }, 50);
+    await afterFlush();
+    assert.ok(effectCount >= 1, 'effect should have run at least once');
+    dispose();
   });
 
   it('should notify immediately when not in a batch', () => {

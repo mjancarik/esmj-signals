@@ -7,6 +7,7 @@ import {
   watch,
   unwatch,
   getPending,
+  afterFlush,
 } from '../index.mjs';
 
 describe('watcher memory leak fixes', () => {
@@ -66,7 +67,7 @@ describe('watcher memory leak fixes', () => {
     // next should be restored to the bound original
   });
 
-  it('should work correctly across watch/unwatch/watch cycles', (_, done) => {
+  it('should work correctly across watch/unwatch/watch cycles', async () => {
     const s = state(1);
     let count = 0;
 
@@ -93,11 +94,9 @@ describe('watcher memory leak fixes', () => {
 
     s.set(2);
 
-    setTimeout(() => {
-      assert.equal(count, 1);
-      dispose2();
-      done();
-    }, 50);
+    await afterFlush();
+    assert.equal(count, 1);
+    dispose2();
   });
 
   it('should not accumulate wrappers on repeated getPending calls', () => {
@@ -126,7 +125,7 @@ describe('watcher memory leak fixes', () => {
     unwatch(c);
   });
 
-  it('should not leak signals after multiple effect dispose cycles', (_, done) => {
+  it('should not leak signals after multiple effect dispose cycles', async () => {
     const s = state(0);
     let effectCount = 0;
 
@@ -141,11 +140,9 @@ describe('watcher memory leak fixes', () => {
     effectCount = 0;
     s.set(1);
 
-    setTimeout(() => {
-      // No disposed effects should run
-      assert.equal(effectCount, 0);
-      done();
-    }, 50);
+    await afterFlush();
+    // No disposed effects should run
+    assert.equal(effectCount, 0);
   });
 
   it('should not hold references to unwatched signals in pendings', () => {

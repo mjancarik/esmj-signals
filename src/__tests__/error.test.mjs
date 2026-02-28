@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { state, computed, effect } from '../index.mjs';
+import { state, computed, effect, afterFlush } from '../index.mjs';
 
 describe('error handling', () => {
   describe('state signals can hold Error values', () => {
@@ -128,7 +128,7 @@ describe('error handling', () => {
   });
 
   describe('effects and errors', () => {
-    it('should not break effect when computed dependency throws', (_, done) => {
+    it('should not break effect when computed dependency throws', async () => {
       const s = state(0);
       let effectError = null;
       let effectCount = 0;
@@ -155,11 +155,9 @@ describe('error handling', () => {
       effectError = null;
       s.set(5);
 
-      setTimeout(() => {
-        assert.equal(effectError, null);
-        dispose();
-        done();
-      }, 50);
+      await afterFlush();
+      assert.equal(effectError, null);
+      dispose();
     });
   });
 

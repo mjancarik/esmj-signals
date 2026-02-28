@@ -1,7 +1,14 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { state, computed, effect, getPending, untrack } from '../index.mjs';
+import {
+  state,
+  computed,
+  effect,
+  getPending,
+  untrack,
+  afterFlush,
+} from '../index.mjs';
 
 describe('Reactive package', () => {
   describe('state', () => {
@@ -168,9 +175,6 @@ describe('Reactive package', () => {
 
   describe('effect', () => {
     it('should be reactive for signals and computed signals', async (t) => {
-      const delay = (ms = 1) =>
-        new Promise((resolve) => setTimeout(resolve, ms));
-
       const signal1 = state(0);
       const signal2 = state(1);
       const destructor = t.mock.fn(() => {}); // eslint-disable-line @typescript-eslint/no-empty-function
@@ -202,7 +206,7 @@ describe('Reactive package', () => {
       pending.forEach((pending) => {
         pending.get();
       });
-      await delay();
+      await afterFlush();
 
       assert.equal(
         destructor.mock?.calls.length,
@@ -235,7 +239,7 @@ describe('Reactive package', () => {
           pending.get();
         });
       });
-      await delay();
+      await afterFlush();
 
       assert.equal(
         destructor.mock?.calls.length,
@@ -266,7 +270,7 @@ describe('Reactive package', () => {
           pending.get();
         });
       });
-      await delay();
+      await afterFlush();
 
       assert.equal(
         destructor.mock?.calls.length,
@@ -294,7 +298,7 @@ describe('Reactive package', () => {
           pending.get();
         });
       });
-      await delay();
+      await afterFlush();
 
       assert.equal(
         destructor.mock?.calls.length,

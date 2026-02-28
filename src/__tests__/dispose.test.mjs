@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { state, effect } from '../index.mjs';
+import { state, effect, afterFlush } from '../index.mjs';
 
 describe('Symbol.dispose', () => {
   it('should have Symbol.dispose on the dispose function', () => {
@@ -14,7 +14,7 @@ describe('Symbol.dispose', () => {
     dispose();
   });
 
-  it('should stop the effect when Symbol.dispose is called', (_, done) => {
+  it('should stop the effect when Symbol.dispose is called', async () => {
     const s = state(1);
     let count = 0;
 
@@ -31,13 +31,11 @@ describe('Symbol.dispose', () => {
     count = 0;
     s.set(2);
 
-    setTimeout(() => {
-      assert.equal(count, 0);
-      done();
-    }, 50);
+    await afterFlush();
+    assert.equal(count, 0);
   });
 
-  it('should work with using keyword', (_, done) => {
+  it('should work with using keyword', async () => {
     const s = state(1);
     let count = 0;
 
@@ -55,10 +53,8 @@ describe('Symbol.dispose', () => {
     count = 0;
     s.set(2);
 
-    setTimeout(() => {
-      assert.equal(count, 0);
-      done();
-    }, 50);
+    await afterFlush();
+    assert.equal(count, 0);
   });
 
   it('should call destructor when disposed via Symbol.dispose', () => {

@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { state, computed, effect } from '../index.mjs';
+import { state, computed, effect, afterFlush } from '../index.mjs';
 
 describe('peek', () => {
   describe('state', () => {
@@ -38,7 +38,7 @@ describe('peek', () => {
       assert.equal(count, 1);
     });
 
-    it('should not subscribe when read inside an effect', (_, done) => {
+    it('should not subscribe when read inside an effect', async () => {
       const a = state(1);
       const b = state(2);
       let effectCount = 0;
@@ -55,11 +55,9 @@ describe('peek', () => {
       // b is peeked — changing b should NOT re-run effect
       b.set(99);
 
-      setTimeout(() => {
-        assert.equal(effectCount, 0);
-        dispose();
-        done();
-      }, 50);
+      await afterFlush();
+      assert.equal(effectCount, 0);
+      dispose();
     });
 
     it('should reflect the latest value', () => {

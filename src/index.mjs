@@ -3,6 +3,8 @@ import { Observable, Observer } from '@esmj/observable';
 let context = null;
 let batchDepth = 0;
 let batchQueue = new Set();
+let flushScheduled = false;
+let flushCallbacks = [];
 
 function untrack(callback) {
   const prevContext = context;
@@ -13,6 +15,39 @@ function untrack(callback) {
   return result;
 }
 
+function flushPending() {
+  flushScheduled = false;
+  const pendings = getPending();
+  for (const pending of pendings) {
+    pending.get();
+  }
+
+  // Run all onFlush callbacks once, then clear
+  const callbacks = flushCallbacks;
+  flushCallbacks = [];
+  for (const cb of callbacks) {
+    cb();
+  }
+}
+
+function scheduleFlush() {
+  if (!flushScheduled) {
+    flushScheduled = true;
+    queueMicrotask(flushPending);
+  }
+}
+
+function onFlush(callback) {
+  flushCallbacks.push(callback);
+
+  // Ensure a flush is scheduled so the callback actually runs
+  scheduleFlush();
+}
+
+function afterFlush() {
+  return new Promise((resolve) => onFlush(resolve));
+}
+
 function batch(callback) {
   batchDepth++;
   try {
@@ -20,11 +55,13 @@ function batch(callback) {
   } finally {
     batchDepth--;
     if (batchDepth === 0) {
-      const queue = Array.from(batchQueue);
-      batchQueue.clear();
+      const queue = batchQueue;
+      batchQueue = new Set();
       for (const observable of queue) {
         observable.next();
       }
+
+      scheduleFlush();
     }
   }
 }
@@ -134,15 +171,9 @@ let w = null;
 function createWatcher(notify) {
   w = new Watcher(notify);
 }
-let timer = null;
+
 createWatcher(() => {
-  // TODO performance improvement
-  clearTimeout(timer);
-  timer = setTimeout(() => {
-    getPending().forEach((pending) => {
-      pending.get();
-    });
-  }, 0);
+  scheduleFlush();
 });
 
 function getPending() {
@@ -419,4 +450,6 @@ export {
   getPending,
   untrack,
   batch,
+  onFlush,
+  afterFlush,
 };
