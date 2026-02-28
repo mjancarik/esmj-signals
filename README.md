@@ -261,6 +261,37 @@ a.set(10);
 result.get(); // 110 (recomputed, picks up current b value)
 ```
 
+### `signal.peek()`
+
+Reads the current value of a signal without subscribing to it. Available on both `state` and `computed` signals. A concise alternative to `untrack(() => signal.get())`.
+
+```javascript
+import { state, computed } from '@esmj/signals';
+
+const count = state(5);
+count.peek(); // 5 — no tracking
+
+const doubled = computed(() => count.get() * 2);
+doubled.peek(); // 10 — no tracking
+
+// Useful inside computed/effects to read without creating a dependency
+const a = state(1);
+const b = state(2);
+
+const result = computed(() => {
+  // a is tracked, b is not
+  return a.get() + b.peek();
+});
+
+result.get(); // 3
+
+b.set(100);
+result.get(); // 3 (b is not tracked)
+
+a.set(10);
+result.get(); // 110 (recomputed, picks up current b)
+```
+
 ### `watch(signal)` / `unwatch(signal)` / `getPending()`
 
 Low-level API for building custom scheduling. Used internally to manage effect execution.
@@ -367,6 +398,7 @@ This library follows the API shape and semantics of the [TC39 Signals proposal](
 | `effect` | Create a reactive side effect |
 | `batch` | Batch multiple updates |
 | `untrack` | Read signals without tracking |
+| `signal.peek()` | Read signal value without tracking |
 | `watch` | Register a signal with the watcher |
 | `unwatch` | Unregister a signal from the watcher |
 | `getPending` | Get pending signals |

@@ -93,7 +93,8 @@ class Watcher extends Observable {
   }
 
   getPending() {
-    const pendings = Array.from(this.#pendings).map((pending) => {
+    const pendings = [];
+    for (const pending of this.#pendings) {
       if (!pending.get[ORIGINAL_FUNCTION]) {
         const originalGet = pending.get.bind(pending);
 
@@ -107,8 +108,8 @@ class Watcher extends Observable {
         pending.get[ORIGINAL_FUNCTION] = originalGet;
       }
 
-      return pending;
-    });
+      pendings.push(pending);
+    }
 
     return pendings;
   }
@@ -176,11 +177,9 @@ class Computed extends Observer {
   }
 
   #clearContextDependencies() {
-    Array.from(this.#context.dependencies.values()).forEach(
-      ({ unsubscribe }) => {
-        unsubscribe();
-      },
-    );
+    for (const { unsubscribe } of this.#context.dependencies.values()) {
+      unsubscribe();
+    }
     this.#context.dependencies.clear();
   }
 
@@ -255,6 +254,23 @@ class Computed extends Observer {
     return this.#signal.get();
   }
 
+  peek() {
+    if (!this.#signal) {
+      this.#signal = createSignal(this.#run(), this.#options);
+    }
+
+    if (this.#dirty) {
+      if (this.#sourceRevisions.size === 0 || this.#needsRecompute()) {
+        unwatch(this);
+        this.#run();
+      } else {
+        this.#dirty = false;
+      }
+    }
+
+    return this.#signal.peek();
+  }
+
   #run() {
     this.#running = true;
     this.#dirty = false;
@@ -271,7 +287,8 @@ class Computed extends Observer {
     }
 
     this.#restorePrevContext();
-    this.#sourceRevisions = new Map(this.#context.sourceRevisions);
+    this.#sourceRevisions = this.#context.sourceRevisions;
+    this.#context.sourceRevisions = new Map();
     this.#running = false;
 
     // todo test it
@@ -348,6 +365,14 @@ function createSignal(value, options = {}) {
     return value;
   }
 
+  function peek() {
+    if (value instanceof Error) {
+      throw value;
+    }
+
+    return value;
+  }
+
   function set(_value) {
     if (!equals(value, _value)) {
       value = _value;
@@ -367,7 +392,13 @@ function createSignal(value, options = {}) {
     return revision;
   }
 
-  const signal = { get, set, getRevision, [INTERNAL_OBSERVABLE]: observable };
+  const signal = {
+    get,
+    set,
+    peek,
+    getRevision,
+    [INTERNAL_OBSERVABLE]: observable,
+  };
 
   return signal;
 }
