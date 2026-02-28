@@ -155,6 +155,7 @@ function unwatch(signal) {
 
 class Computed extends Observer {
   #dirty = true;
+  #running = false;
   #prevContext = null;
   #signal = null;
   #context = this.#createNewContext();
@@ -206,6 +207,10 @@ class Computed extends Observer {
   }
 
   get() {
+    if (this.#running) {
+      throw new Error('Cycle detected in computed signal');
+    }
+
     if (!this.#signal) {
       this.#signal = createSignal(this.#run(), this.#options);
     }
@@ -219,6 +224,7 @@ class Computed extends Observer {
   }
 
   #run() {
+    this.#running = true;
     this.#dirty = false;
 
     this.#clearContextDependencies();
@@ -232,15 +238,16 @@ class Computed extends Observer {
     }
 
     this.#restorePrevContext();
+    this.#running = false;
 
     // todo test it
     if (result instanceof Promise) {
       result = result
         .then((value) => {
-          return value;
+          this.#signal.set(value);
         })
         .catch((e) => {
-          throw e;
+          this.#signal.set(e);
         });
     }
 

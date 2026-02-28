@@ -280,6 +280,25 @@ a.set(5);
 safe.get(); // 20
 ```
 
+### Cycle Detection
+
+Circular dependencies between computed signals are detected and throw a clear error instead of causing a stack overflow:
+
+```javascript
+import { computed } from '@esmj/signals';
+
+const a = computed(() => b.get() + 1);
+const b = computed(() => a.get() + 1);
+
+try {
+  a.get();
+} catch (e) {
+  console.log(e.message); // 'Cycle detected in computed signal'
+}
+```
+
+This applies to any cycle length — self-referencing, two-node, three-node, etc. Diamond dependencies (where multiple paths lead to the same signal without a cycle) are handled correctly and do not trigger false positives.
+
 ## TC39 Signals Proposal Alignment
 
 This library follows the API shape and semantics of the [TC39 Signals proposal](https://github.com/tc39/proposal-signals):
