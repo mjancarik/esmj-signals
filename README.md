@@ -1,3 +1,314 @@
-# Signals
+# @esmj/signals
 
-// TODO
+A tiny, fine-grained reactive signals library for JavaScript. Built as a lightweight wrapper around the [TC39 Signals proposal](https://github.com/tc39/proposal-signals), providing a ready-to-use API today that aligns with the future standard.
+
+## Installation
+
+```bash
+npm install @esmj/signals
+```
+
+## Quick Start
+
+```javascript
+import { state, computed, effect } from '@esmj/signals';
+
+const count = state(0);
+const doubled = computed(() => count.get() * 2);
+
+effect(() => {
+  console.log(`Count: ${count.get()}, Doubled: ${doubled.get()}`);
+});
+// logs: "Count: 0, Doubled: 0"
+
+count.set(5);
+// logs: "Count: 5, Doubled: 10"
+```
+
+## Motivation
+
+The [TC39 Signals proposal](https://github.com/tc39/proposal-signals) aims to bring reactive primitives to the JavaScript language. This library provides a lightweight implementation of the same concepts so you can start using signals today with minimal overhead. When the proposal lands natively, migration should be straightforward.
+
+## API
+
+### `state(value, options?)`
+
+Creates a reactive signal (also exported as `createSignal`).
+
+```javascript
+import { state } from '@esmj/signals';
+
+const name = state('Alice');
+
+// Read the value
+name.get(); // 'Alice'
+
+// Write a new value
+name.set('Bob');
+name.get(); // 'Bob'
+```
+
+#### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `equals` | `(a, b) => boolean` | `Object.is` | Custom equality function. Notifications are skipped when `equals` returns `true`. |
+
+```javascript
+// Signal that always notifies on set, even with the same value
+const counter = state(0, { equals: () => false });
+
+// Signal with deep equality (e.g. using a library)
+const data = state({ a: 1 }, { equals: deepEqual });
+```
+
+### `computed(callback, options?)`
+
+Creates a lazy, memoized derived signal. The callback is not executed until `.get()` is first called. Recomputation only occurs when a dependency changes.
+
+```javascript
+import { state, computed } from '@esmj/signals';
+
+const firstName = state('John');
+const lastName = state('Doe');
+
+const fullName = computed(() => `${firstName.get()} ${lastName.get()}`);
+
+fullName.get(); // 'John Doe'
+
+firstName.set('Jane');
+fullName.get(); // 'Jane Doe'
+```
+
+#### Chained computeds
+
+Computed signals can depend on other computed signals:
+
+```javascript
+const a = state(1);
+const b = computed(() => a.get() * 2);
+const c = computed(() => b.get() + 10);
+
+c.get(); // 12
+
+a.set(5);
+c.get(); // 20
+```
+
+#### Options
+
+Same as `state` options (`equals`).
+
+### `effect(callback, options?)`
+
+Creates a side effect that automatically re-runs whenever its dependencies change. Returns a dispose function to stop the effect.
+
+```javascript
+import { state, effect } from '@esmj/signals';
+
+const count = state(0);
+
+const dispose = effect(() => {
+  console.log('Count is:', count.get());
+});
+// logs: "Count is: 0"
+
+count.set(1);
+// logs: "Count is: 1"
+
+// Stop the effect
+dispose();
+count.set(2);
+// (nothing logged)
+```
+
+#### Cleanup / Destructor
+
+If the effect callback returns a function, it will be called before each re-execution and on disposal:
+
+```javascript
+const visible = state(true);
+
+const dispose = effect(() => {
+  if (visible.get()) {
+    const handler = () => console.log('clicked');
+    document.addEventListener('click', handler);
+
+    // Cleanup: runs before next effect execution or on dispose
+    return () => {
+      document.removeEventListener('click', handler);
+    };
+  }
+});
+
+visible.set(false); // cleanup runs, listener removed
+dispose();
+```
+
+### `batch(callback)`
+
+Batches multiple signal updates into a single notification. Computed signals and effects are only notified once after the batch completes, preventing intermediate (glitchy) states.
+
+```javascript
+import { state, computed, batch } from '@esmj/signals';
+
+const a = state(1);
+const b = state(2);
+let computeCount = 0;
+
+const sum = computed(() => {
+  computeCount++;
+  return a.get() + b.get();
+});
+
+sum.get(); // 3, computeCount === 1
+
+batch(() => {
+  a.set(10);
+  b.set(20);
+  // No recomputation happens here
+});
+
+sum.get(); // 30, computeCount === 2 (only one recomputation!)
+```
+
+#### Nested batches
+
+Inner batches do not flush until the outermost batch completes:
+
+```javascript
+batch(() => {
+  a.set(10);
+  batch(() => {
+    b.set(20);
+    c.set(30);
+  });
+  // Still batched — nothing flushed yet
+});
+// Now all three updates are flushed at once
+```
+
+### `untrack(callback)`
+
+Executes a callback without tracking any signal dependencies. Useful inside effects or computed signals when you want to read a signal without subscribing to it.
+
+```javascript
+import { state, computed, untrack } from '@esmj/signals';
+
+const a = state(1);
+const b = state(2);
+
+const result = computed(() => {
+  // `a` is tracked — changes to `a` will recompute
+  const aVal = a.get();
+
+  // `b` is NOT tracked — changes to `b` will NOT recompute
+  const bVal = untrack(() => b.get());
+
+  return aVal + bVal;
+});
+
+result.get(); // 3
+
+b.set(100);
+result.get(); // 3 (not recomputed because b is untracked)
+
+a.set(10);
+result.get(); // 110 (recomputed, picks up current b value)
+```
+
+### `watch(signal)` / `unwatch(signal)` / `getPending()`
+
+Low-level API for building custom scheduling. Used internally to manage effect execution.
+
+```javascript
+import { computed, watch, unwatch, getPending } from '@esmj/signals';
+
+const c = computed(() => /* ... */);
+
+// Register a signal with the global watcher
+watch(c);
+
+// Get all signals with pending updates
+const pending = getPending();
+pending.forEach((p) => p.get());
+
+// Unregister a signal
+unwatch(c);
+```
+
+### `createWatcher(notify)`
+
+Creates a custom watcher with a custom notification strategy. Replaces the default watcher (which uses `setTimeout`).
+
+```javascript
+import { createWatcher, getPending } from '@esmj/signals';
+
+// Synchronous flush strategy
+createWatcher(() => {
+  getPending().forEach((pending) => pending.get());
+});
+
+// Or microtask-based strategy
+createWatcher(() => {
+  queueMicrotask(() => {
+    getPending().forEach((pending) => pending.get());
+  });
+});
+```
+
+## Error Handling
+
+Errors thrown in `computed` callbacks are captured and re-thrown on `.get()`:
+
+```javascript
+const a = state(0);
+const safe = computed(() => {
+  if (a.get() === 0) {
+    throw new Error('Cannot be zero');
+  }
+  return 100 / a.get();
+});
+
+try {
+  safe.get();
+} catch (e) {
+  console.log(e.message); // 'Cannot be zero'
+}
+
+a.set(5);
+safe.get(); // 20
+```
+
+## TC39 Signals Proposal Alignment
+
+This library follows the API shape and semantics of the [TC39 Signals proposal](https://github.com/tc39/proposal-signals):
+
+| TC39 Proposal | @esmj/signals | Status |
+|---------------|---------------|--------|
+| `Signal.State` | `state` / `createSignal` | ✅ |
+| `Signal.Computed` | `computed` | ✅ |
+| `Signal.subtle.Watcher` | `createWatcher` / `watch` / `unwatch` | ✅ |
+| `Signal.subtle.untrack` | `untrack` | ✅ |
+| `Signal.subtle.Watcher.prototype.getPending` | `getPending` | ✅ |
+| Effect (userland in proposal) | `effect` | ✅ |
+| Batch (userland in proposal) | `batch` | ✅ |
+
+## Exports
+
+| Export | Description |
+|--------|-------------|
+| `state` | Create a reactive signal (alias: `createSignal`) |
+| `createSignal` | Create a reactive signal |
+| `computed` | Create a derived/memoized signal |
+| `effect` | Create a reactive side effect |
+| `batch` | Batch multiple updates |
+| `untrack` | Read signals without tracking |
+| `watch` | Register a signal with the watcher |
+| `unwatch` | Unregister a signal from the watcher |
+| `getPending` | Get pending signals |
+| `createWatcher` | Create a custom watcher |
+
+## License
+
+[MIT](./LICENSE)

@@ -1,6 +1,8 @@
 import { Observable, Observer } from '@esmj/observable';
 
 let context = null;
+let batchDepth = 0;
+let batchQueue = new Set();
 
 function untrack(callback) {
   const prevContext = context;
@@ -9,6 +11,22 @@ function untrack(callback) {
   context = prevContext;
 
   return result;
+}
+
+function batch(callback) {
+  batchDepth++;
+  try {
+    callback();
+  } finally {
+    batchDepth--;
+    if (batchDepth === 0) {
+      const queue = Array.from(batchQueue);
+      batchQueue.clear();
+      for (const observable of queue) {
+        observable.next();
+      }
+    }
+  }
 }
 
 const INTERNAL_OBSERVABLE = Symbol('internal observable');
@@ -96,8 +114,12 @@ class Watcher extends Observable {
   }
 
   unwatch(signal) {
-    signal.next = signal.next[ORIGINAL_FUNCTION];
-    signal.get = signal.get[ORIGINAL_FUNCTION];
+    signal.next = signal.next[ORIGINAL_FUNCTION]
+      ? signal.next[ORIGINAL_FUNCTION]
+      : signal.next;
+    signal.get = signal.get[ORIGINAL_FUNCTION]
+      ? signal.get[ORIGINAL_FUNCTION]
+      : signal.get;
 
     return this.unsubscribe(signal);
   }
@@ -179,6 +201,7 @@ class Computed extends Observer {
 
   next() {
     this.#dirty = true;
+    watch(this);
     this.#signal[INTERNAL_OBSERVABLE].next();
   }
 
@@ -188,6 +211,7 @@ class Computed extends Observer {
     }
 
     if (this.#dirty) {
+      unwatch(this);
       this.#run();
     }
 
@@ -276,12 +300,15 @@ function createSignal(value, options = {}) {
     return value;
   }
 
-  // TODO implement batch updates
   function set(_value) {
     if (!equals(value, _value)) {
       value = _value;
 
-      observable.next();
+      if (batchDepth > 0) {
+        batchQueue.add(observable);
+      } else {
+        observable.next();
+      }
     }
 
     return value;
@@ -303,4 +330,5 @@ export {
   unwatch,
   getPending,
   untrack,
+  batch,
 };

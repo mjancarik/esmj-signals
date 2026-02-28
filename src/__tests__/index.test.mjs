@@ -1,15 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import {
-  state,
-  computed,
-  effect,
-  getPending,
-  untrack,
-  watch,
-  unwatch,
-} from '../index.mjs';
+import { state, computed, effect, getPending, untrack } from '../index.mjs';
 
 describe('Reactive package', () => {
   describe('state', () => {
@@ -76,7 +68,6 @@ describe('Reactive package', () => {
       const someComputed2 = () => computed1.get() + signal3.get();
       const stubSomeComputed2 = t.mock.fn(someComputed2);
       const computed2 = computed(stubSomeComputed2, { debug: 'computed2' });
-      watch(computed2);
 
       assert.equal(
         stubSomeComputed1.mock?.calls.length,
@@ -133,8 +124,6 @@ describe('Reactive package', () => {
         2,
         'computed2 is recomputed after get',
       );
-
-      unwatch(computed2);
     });
 
     it('should re-throw error if computed signal catch error', () => {
@@ -209,7 +198,7 @@ describe('Reactive package', () => {
 
       let pending = getPending();
 
-      assert.equal(pending.length, 1, 'iteration one: pending should be one');
+      assert.equal(pending.length, 2, 'iteration one: pending should be two');
       pending.forEach((pending) => {
         pending.get();
       });
@@ -225,6 +214,11 @@ describe('Reactive package', () => {
         2,
         'effect should be called 2 times (one init, one recomputed)',
       );
+      assert.equal(
+        computedSignal.get(),
+        3,
+        'computedSignal should be 3 after first iteration',
+      );
 
       // Two iteration
       signal2.set(3);
@@ -235,7 +229,7 @@ describe('Reactive package', () => {
 
       pending = getPending();
 
-      assert.equal(pending.length, 1, 'iteration two: pending should be one');
+      assert.equal(pending.length, 2, 'iteration two: pending should be two');
       pending.forEach((pending) => {
         untrack(() => {
           pending.get();
@@ -252,6 +246,11 @@ describe('Reactive package', () => {
         stubSomeEffect.mock?.calls.length,
         3,
         'effect should be called 2 times (one init, two recomputed)',
+      );
+      assert.equal(
+        computedSignal.get(),
+        5,
+        'computedSignal should be 5 after second iteration',
       );
 
       // Three iteration
@@ -287,8 +286,8 @@ describe('Reactive package', () => {
 
       assert.equal(
         pending.length,
-        1,
-        'iteration fourth: pending should be zero',
+        2,
+        'iteration fourth: pending should be two',
       );
       pending.forEach((pending) => {
         untrack(() => {
@@ -306,6 +305,11 @@ describe('Reactive package', () => {
         stubSomeEffect.mock?.calls.length,
         4,
         'effect should be called 2 times (one init, three recomputed)',
+      );
+      assert.equal(
+        computedSignal.get(),
+        13,
+        'computedSignal should be 5 after fourth iteration',
       );
     });
   });
