@@ -96,12 +96,13 @@ class Watcher extends Observable {
     const pendings = [];
     for (const pending of this.#pendings) {
       if (!pending.get[ORIGINAL_FUNCTION]) {
-        const originalGet = pending.get.bind(pending);
+        const originalGet = pending.get;
+        const boundGet = originalGet.bind(pending);
 
         pending.get = () => {
           return untrack(() => {
             this.#pendings.delete(pending);
-            return originalGet();
+            return boundGet();
           });
         };
 
@@ -121,6 +122,8 @@ class Watcher extends Observable {
     signal.get = signal.get[ORIGINAL_FUNCTION]
       ? signal.get[ORIGINAL_FUNCTION]
       : signal.get;
+
+    this.#pendings.delete(signal);
 
     return this.unsubscribe(signal);
   }
@@ -310,6 +313,13 @@ class Computed extends Observer {
 
     return result;
   }
+
+  destroy() {
+    this.#clearContextDependencies();
+    this.#sourceRevisions.clear();
+    this.#dirty = true;
+    this.#error = NO_ERROR;
+  }
 }
 
 function computed(callback, options) {
@@ -334,6 +344,7 @@ function effect(callback, options) {
 
   const dispose = () => {
     destructor?.();
+    c.destroy();
     unwatch(c);
   };
 
