@@ -161,6 +161,8 @@ class Computed extends Observer {
   #context = this.#createNewContext();
   #callback = null;
   #options = null;
+  #revision = 0;
+  #sourceRevisions = new Map();
 
   constructor(callback, options) {
     super();
@@ -185,6 +187,7 @@ class Computed extends Observer {
   #createNewContext() {
     const context = {
       dependencies: new Map(),
+      sourceRevisions: new Map(),
       observer: this,
     };
 
@@ -198,6 +201,25 @@ class Computed extends Observer {
 
   #restorePrevContext() {
     context = this.#prevContext;
+  }
+
+  getRevision() {
+    return this.#revision;
+  }
+
+  #needsRecompute() {
+    for (const [source, savedRevision] of this.#sourceRevisions) {
+      // If source is a Computed, recursively validate it first (pull-based).
+      // Use untrack to avoid context-tracking side effects during validation.
+      if (source instanceof Computed) {
+        untrack(() => source.get());
+      }
+
+      if (source.getRevision() !== savedRevision) {
+        return true;
+      }
+    }
+    return false;
   }
 
   next() {
@@ -216,8 +238,18 @@ class Computed extends Observer {
     }
 
     if (this.#dirty) {
-      unwatch(this);
-      this.#run();
+      if (this.#sourceRevisions.size === 0 || this.#needsRecompute()) {
+        unwatch(this);
+        this.#run();
+      } else {
+        // False alarm from diamond — sources didn't actually change
+        this.#dirty = false;
+      }
+    }
+
+    // Track this Computed as a source in the parent context
+    if (typeof context === 'object' && context !== null) {
+      context.sourceRevisions.set(this, this.#revision);
     }
 
     return this.#signal.get();
@@ -228,6 +260,7 @@ class Computed extends Observer {
     this.#dirty = false;
 
     this.#clearContextDependencies();
+    this.#context.sourceRevisions.clear();
     this.#savePrevContext();
 
     let result;
@@ -238,6 +271,7 @@ class Computed extends Observer {
     }
 
     this.#restorePrevContext();
+    this.#sourceRevisions = new Map(this.#context.sourceRevisions);
     this.#running = false;
 
     // todo test it
@@ -254,6 +288,9 @@ class Computed extends Observer {
     if (this.#signal) {
       this.#signal.set(result);
     }
+
+    // Increment revision so downstream computeds can detect the change
+    this.#revision++;
 
     if (result instanceof Error) {
       throw result;
@@ -290,6 +327,7 @@ function effect(callback, options) {
 
 function createSignal(value, options = {}) {
   const equals = options?.equals ?? Object.is;
+  let revision = 0;
 
   const observable = new Observable();
   function get() {
@@ -298,6 +336,9 @@ function createSignal(value, options = {}) {
         observable,
         observable.subscribe(context.observer),
       );
+
+      // Track this signal as a source in the current context
+      context.sourceRevisions.set(signal, revision);
     }
 
     if (value instanceof Error) {
@@ -310,6 +351,7 @@ function createSignal(value, options = {}) {
   function set(_value) {
     if (!equals(value, _value)) {
       value = _value;
+      revision++;
 
       if (batchDepth > 0) {
         batchQueue.add(observable);
@@ -321,7 +363,13 @@ function createSignal(value, options = {}) {
     return value;
   }
 
-  return { get, set, [INTERNAL_OBSERVABLE]: observable };
+  function getRevision() {
+    return revision;
+  }
+
+  const signal = { get, set, getRevision, [INTERNAL_OBSERVABLE]: observable };
+
+  return signal;
 }
 
 // alias

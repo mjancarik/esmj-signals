@@ -188,6 +188,50 @@ batch(() => {
 // Now all three updates are flushed at once
 ```
 
+### Efficient Updates (Pull-based Validation)
+
+The library uses pull-based validation with revision tracking to avoid redundant recomputations in diamond dependency graphs:
+
+```
+      state A
+      /     \
+computed B  computed C
+      \     /
+     computed D
+```
+
+When `A` changes, both `B` and `C` are marked dirty, which also marks `D` dirty. However, when `D.get()` is called, it first validates its sources by pulling their current values. Each source is validated recursively before `D` decides whether to recompute. This means `D` recomputes **exactly once**, not twice.
+
+```javascript
+import { state, computed } from '@esmj/signals';
+
+const a = state(1);
+const b = computed(() => a.get() * 2);
+const c = computed(() => a.get() * 3);
+const d = computed(() => b.get() + c.get());
+
+d.get(); // 5
+
+a.set(2);
+d.get(); // 10 — d recomputed only once, not twice
+```
+
+#### Revision tracking
+
+Every signal tracks a revision number that increments on each value change. This allows downstream computed signals to detect whether a source actually changed or if the dirty flag was a false alarm.
+
+```javascript
+const s = state(1);
+s.getRevision(); // 0
+
+s.set(2);
+s.getRevision(); // 1
+
+// Same value — revision does not increment
+s.set(2);
+s.getRevision(); // 1
+```
+
 ### `untrack(callback)`
 
 Executes a callback without tracking any signal dependencies. Useful inside effects or computed signals when you want to read a signal without subscribing to it.
