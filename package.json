@@ -35,12 +35,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mjancarik/esmj-task.git"
+    "url": "git+https://github.com/mjancarik/esmj-signals.git"
   },
   "author": "Miroslav Jancarik",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/mjancarik/esmj-task/issues"
+    "url": "https://github.com/mjancarik/esmj-signals/issues"
   },
   "lint-staged": {
     "**/*.{ts,js,mjs}": "npm run lint:cmd"
@@ -59,7 +59,7 @@
     "registry": "https://registry.npmjs.org/",
     "access": "public"
   },
-  "homepage": "https://github.com/mjancarik/esmj-task#readme",
+  "homepage": "https://github.com/mjancarik/esmj-signals#readme",
   "devDependencies": {
     "@commitlint/cli": "^19.5.0",
     "@commitlint/config-conventional": "^19.5.0",

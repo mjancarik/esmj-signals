@@ -248,7 +248,7 @@ class Computed extends Observer {
 
   next() {
     this.#dirty = true;
-    watch(this);
+    //watch(this);
     this.#signal[INTERNAL_OBSERVABLE].next();
   }
 
@@ -263,7 +263,7 @@ class Computed extends Observer {
 
     if (this.#dirty || this.#error !== NO_ERROR) {
       if (this.#sourceRevisions.size === 0 || this.#needsRecompute()) {
-        unwatch(this);
+        //unwatch(this);
         this.#run();
       } else {
         this.#dirty = false;
@@ -288,7 +288,7 @@ class Computed extends Observer {
 
     if (this.#dirty || this.#error !== NO_ERROR) {
       if (this.#sourceRevisions.size === 0 || this.#needsRecompute()) {
-        unwatch(this);
+        //unwatch(this);
         this.#run();
       } else {
         this.#dirty = false;

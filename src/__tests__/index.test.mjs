@@ -202,7 +202,7 @@ describe('Reactive package', () => {
 
       let pending = getPending();
 
-      assert.equal(pending.length, 2, 'iteration one: pending should be two');
+      assert.equal(pending.length, 1, 'iteration one: pending should be one');
       pending.forEach((pending) => {
         pending.get();
       });
@@ -233,7 +233,7 @@ describe('Reactive package', () => {
 
       pending = getPending();
 
-      assert.equal(pending.length, 2, 'iteration two: pending should be two');
+      assert.equal(pending.length, 1, 'iteration two: pending should be one');
       pending.forEach((pending) => {
         untrack(() => {
           pending.get();
@@ -290,8 +290,8 @@ describe('Reactive package', () => {
 
       assert.equal(
         pending.length,
-        2,
-        'iteration fourth: pending should be two',
+        1,
+        'iteration fourth: pending should be one',
       );
       pending.forEach((pending) => {
         untrack(() => {
