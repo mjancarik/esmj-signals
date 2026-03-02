@@ -12,8 +12,8 @@
   "module": "dist/index",
   "exports": {
     ".": {
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs"
     }
   },
   "sideEffects": false,
@@ -30,7 +30,7 @@
     "postversion": "git push && git push --tags",
     "commit": "node_modules/.bin/git-cz",
     "changelog": "node_modules/.bin/conventional-changelog -p angular -i CHANGELOG.md -s -r 1",
-    "build": "node_modules/.bin/tsup --dts",
+    "build": "node_modules/.bin/tsup --dts && cp src/index.d.ts dist/index.d.ts",
     "prepare": "husky install"
   },
   "repository": {
