@@ -1,3 +1,9 @@
+## 0.3.0 (2026-03-02)
+
+* feat: 🎸 add types to public API ([b95381e](https://github.com/mjancarik/esmj-signals/commit/b95381e))
+
+
+
 ## 0.2.0 (2026-03-01)
 
 * fix: 🐛 reported bug with missing reactivity ([031fbeb](https://github.com/mjancarik/esmj-signals/commit/031fbeb))
