@@ -1,3 +1,11 @@
+## 0.4.0 (2026-04-02)
+
+* ci: 🎡 remove vitest ([152c2d3](https://github.com/mjancarik/esmj-signals/commit/152c2d3))
+* chore: 🤖 update development stack ([ad2b296](https://github.com/mjancarik/esmj-signals/commit/ad2b296))
+* feat: 🎸 add debug mode ([08248f5](https://github.com/mjancarik/esmj-signals/commit/08248f5))
+
+
+
 ## 0.3.0 (2026-03-02)
 
 * feat: 🎸 add types to public API ([b95381e](https://github.com/mjancarik/esmj-signals/commit/b95381e))
