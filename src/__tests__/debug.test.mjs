@@ -1,13 +1,13 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
 
-import { state, computed, effect, RX_TYPE, RX_DEBUG_NAME } from '../index.mjs';
 import {
-  installDebug,
+  devtoolsFormatter,
   getDependencies,
   getRegistry,
-  devtoolsFormatter,
+  installDebug,
 } from '../debug.mjs';
+import { RX_DEBUG_NAME, RX_TYPE, computed, effect, state } from '../index.mjs';
 
 // Install once for the whole file — subsequent calls are no-ops.
 installDebug({ log: false });

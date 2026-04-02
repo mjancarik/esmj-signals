@@ -1,6 +1,7 @@
 
 /src
 /coverage
+/examples
 .babelrc
 .eslintrc.js
 .gitignore
@@ -12,8 +13,12 @@
 .husky/
 .history/
 utils/
+benchmark/
 README.md
 CHANGELOG.md
 tsup.config.mjs
 jest.config.js
 setupJest.mjs
+biome.json
+tsconfig.json
+package-lock.json

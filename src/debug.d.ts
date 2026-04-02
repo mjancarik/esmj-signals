@@ -1,4 +1,4 @@
-import type { Signal, ComputedSignal, Dispose } from './index.d.ts';
+import type { ComputedSignal, Dispose, Signal } from './index.d.ts';
 
 export interface DependencyNode {
   name: string;

@@ -387,7 +387,7 @@ function effect(callback, options) {
   let destructor;
   const { debug, ...restOptions } = options ?? {};
 
-  let c = computed(
+  const c = computed(
     () => {
       destructor?.();
       destructor = callback();

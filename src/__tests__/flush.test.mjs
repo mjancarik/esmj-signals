@@ -1,6 +1,6 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { state, computed, effect, batch, afterFlush } from '../index.mjs';
+import { describe, it } from 'node:test';
+import { afterFlush, batch, computed, effect, state } from '../index.mjs';
 
 describe('flush strategies', () => {
   describe('microtask flush', () => {

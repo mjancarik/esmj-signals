@@ -1,6 +1,6 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { state, computed, effect, afterFlush } from '../index.mjs';
+import { describe, it } from 'node:test';
+import { afterFlush, computed, effect, state } from '../index.mjs';
 
 describe('peek', () => {
   describe('state', () => {

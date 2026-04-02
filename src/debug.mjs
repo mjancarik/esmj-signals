@@ -1,4 +1,4 @@
-import { RX_TYPE, RX_DEBUG_NAME, setDebugHooks } from './index.mjs';
+import { RX_DEBUG_NAME, RX_TYPE, setDebugHooks } from './index.mjs';
 
 // ─── Registry ────────────────────────────────────────────────────────────────
 

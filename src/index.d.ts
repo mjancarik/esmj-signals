@@ -125,7 +125,7 @@ export function computed<T>(
  * ```
  */
 export function effect(
-  callback: () => void | (() => void),
+  callback: () => undefined | (() => void),
   options?: SignalOptions<unknown>,
 ): Dispose;
 

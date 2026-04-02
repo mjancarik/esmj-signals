@@ -1,11 +1,10 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { state, computed } from '../index.mjs';
+import { describe, it } from 'node:test';
+import { computed, state } from '../index.mjs';
 
 describe('cycle detection', () => {
   it('should detect a direct self-referencing computed', () => {
-    let c;
-    c = computed(() => c.get() + 1);
+    const c = computed(() => c.get() + 1);
 
     assert.throws(() => c.get(), {
       message: 'Cycle detected in computed signal',
@@ -78,8 +77,7 @@ describe('cycle detection', () => {
     const s = state(1);
     let shouldCycle = true;
 
-    let c;
-    c = computed(() => {
+    const c = computed(() => {
       if (shouldCycle) {
         return c.get();
       }

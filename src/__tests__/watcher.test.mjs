@@ -1,13 +1,13 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
 import {
-  state,
+  afterFlush,
   computed,
   effect,
-  watch,
-  unwatch,
   getPending,
-  afterFlush,
+  state,
+  unwatch,
+  watch,
 } from '../index.mjs';
 
 describe('watcher memory leak fixes', () => {

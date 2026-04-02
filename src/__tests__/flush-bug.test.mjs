@@ -1,6 +1,6 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { state, computed, effect } from '../index.mjs';
+import { describe, it } from 'node:test';
+import { computed, effect, state } from '../index.mjs';
 
 describe('flush bug verification', () => {
   it('effect fires on every consecutive change through computed (Promise.resolve)', async () => {

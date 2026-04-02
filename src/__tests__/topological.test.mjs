@@ -1,6 +1,6 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { state, computed, batch } from '../index.mjs';
+import { describe, it } from 'node:test';
+import { batch, computed, state } from '../index.mjs';
 
 describe('topological sorting (pull-based validation)', () => {
   it('should not recompute diamond tail more than once', () => {

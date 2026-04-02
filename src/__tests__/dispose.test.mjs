@@ -1,6 +1,6 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { state, effect, afterFlush } from '../index.mjs';
+import { describe, it } from 'node:test';
+import { afterFlush, effect, state } from '../index.mjs';
 
 describe('Symbol.dispose', () => {
   it('should have Symbol.dispose on the dispose function', () => {
