@@ -563,6 +563,137 @@ This library follows the API shape and semantics of the [TC39 Signals proposal](
 | `createWatcher` | Create a custom watcher |
 | `onFlush` | Register a one-shot post-flush callback |
 | `afterFlush` | Returns a promise that resolves after flush |
+| `setDebugHooks` | Register lifecycle hooks for debug tooling |
+| `RX_TYPE` | Symbol identifying primitive type (`'signal'`\|`'computed'`\|`'effect'`) |
+| `RX_DEBUG_NAME` | Symbol carrying the `debug` label |
+
+## Debug Tooling
+
+`@esmj/signals` ships a separate, fully tree-shakeable debug module. Import it only in development — it has zero cost in production bundles that don't include it.
+
+```javascript
+import { installDebug } from '@esmj/signals/debug';
+
+installDebug();
+```
+
+### Setup
+
+Call `installDebug()` once at app startup, before creating the signals you want observed. Pass `{ log: false }` to suppress `console.debug` output while still keeping the registry and DevTools formatter active.
+
+```javascript
+import { installDebug } from '@esmj/signals/debug';
+
+// Enable everything (logging on by default)
+installDebug();
+
+// Or silence auto-logging while keeping the formatter and window.__RX__
+installDebug({ log: false });
+```
+
+### `debug` option
+
+Give any signal, computed, or effect a name with the `debug` option. Named primitives are auto-registered and auto-logged.
+
+```javascript
+import { state, computed, effect } from '@esmj/signals';
+import { installDebug } from '@esmj/signals/debug';
+
+installDebug();
+
+const count = state(0, { debug: 'count' });
+// console: [signal:count] created
+
+const doubled = computed(() => count.get() * 2, { debug: 'doubled' });
+// console: [computed:doubled] created
+
+const dispose = effect(() => {
+  document.title = `Count: ${count.get()}`;
+}, { debug: 'titleEffect' });
+// console: [effect:titleEffect] created
+
+count.set(5);
+// console: [signal:count] 0 → 5
+// console: [computed:doubled] recomputing
+```
+
+### Chrome DevTools custom formatters
+
+After calling `installDebug()`, enable **"Enable custom formatters"** in Chrome DevTools settings (DevTools → Settings → Preferences → Enable custom formatters).
+
+Signals, computeds, and effects then render with coloured labels in the console instead of raw objects:
+
+```
+Signal[count]: 5          ← purple, bold
+Computed[doubled]: 10     ← teal, bold
+Effect[titleEffect]       ← amber, bold
+```
+
+Expanding a node in the console shows:
+- **Signal**: `type`, `name`, `value`, `revision`
+- **Computed**: `type`, `name`, `value`, `revision`, `dirty`, `dependencies` (recursive)
+- **Effect**: `type`, `name`, `graph` (full dependency tree of the underlying computed)
+
+### `window.__RX__` global registry
+
+`installDebug()` exposes a `window.__RX__` object for live inspection from the browser console:
+
+```javascript
+// Access the live signal by name
+window.__RX__.signals.get('count');       // Signal object
+window.__RX__.computeds.get('doubled');   // Computed object
+window.__RX__.effects.get('titleEffect'); // Dispose function
+
+// Print a named primitive (uses the custom formatter if enabled)
+window.__RX__.inspect('count');
+
+// Get all registered primitives
+window.__RX__.getRegistry();
+// { signals: Map, computeds: Map, effects: Map }
+```
+
+### `getDependencies(computed)`
+
+Returns a recursive dependency tree for the given computed signal. Useful for understanding the reactive graph at runtime.
+
+```javascript
+import { state, computed } from '@esmj/signals';
+import { installDebug, getDependencies } from '@esmj/signals/debug';
+
+installDebug({ log: false });
+
+const price = state(10, { debug: 'price' });
+const qty   = state(3,  { debug: 'qty' });
+const total = computed(() => price.get() * qty.get(), { debug: 'total' });
+total.get();
+
+console.log(getDependencies(total));
+// {
+//   name: 'total', type: 'computed', revision: 1, dirty: false,
+//   dependencies: [
+//     { name: 'price', type: 'signal', value: 10, revision: 0 },
+//     { name: 'qty',   type: 'signal', value: 3,  revision: 0 },
+//   ]
+// }
+```
+
+### `getRegistry()`
+
+Returns the current registry snapshot without accessing `window`.
+
+```javascript
+import { getRegistry } from '@esmj/signals/debug';
+
+const { signals, computeds, effects } = getRegistry();
+```
+
+### Debug exports summary
+
+| Export (from `@esmj/signals/debug`) | Description |
+|-------------------------------------|-------------|
+| `installDebug(options?)` | Activate debug tooling (call once at startup) |
+| `getDependencies(computed)` | Recursive dependency tree for a computed signal |
+| `getRegistry()` | Returns `{ signals, computeds, effects }` Maps |
 
 ## License
 

@@ -26,6 +26,13 @@ export interface ComputedSignal<T> {
   next(): void;
   /** Destroys the computed signal, clearing all dependencies. */
   destroy(): void;
+  /** Returns internal debug metadata. Used by debug tooling. */
+  getDebugInfo(): {
+    name: string | null;
+    dirty: boolean;
+    revision: number;
+    sourceDependencies: unknown[];
+  };
 }
 
 /**
@@ -243,3 +250,32 @@ export function onFlush(callback: () => void): void;
  * ```
  */
 export function afterFlush(): Promise<void>;
+
+/**
+ * Symbol attached to signal, computed, and effect primitives to identify their type.
+ * Values: `'signal'` | `'computed'` | `'effect'`
+ */
+export declare const RX_TYPE: unique symbol;
+
+/**
+ * Symbol attached to signal, computed, and effect primitives that carry the `debug` label.
+ */
+export declare const RX_DEBUG_NAME: unique symbol;
+
+/**
+ * Lifecycle hooks used by debug tooling.
+ * All callbacks are optional.
+ */
+export interface DebugHooks {
+  onSignalCreate?: (signal: Signal<unknown>) => void;
+  onSignalSet?: (signal: Signal<unknown>, prev: unknown, next: unknown) => void;
+  onComputedCreate?: (computed: ComputedSignal<unknown>) => void;
+  onComputedRun?: (computed: ComputedSignal<unknown>) => void;
+  onEffectCreate?: (dispose: Dispose) => void;
+}
+
+/**
+ * Registers debug lifecycle hooks. Called internally by `installDebug()` from `debug.mjs`.
+ * Hooks are null-guarded: passing `null` or omitting a hook disables it at zero cost.
+ */
+export function setDebugHooks(hooks: DebugHooks | null): void;

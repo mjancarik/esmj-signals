@@ -1,7 +1,7 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  entry: ['src/index.mjs'],
+  entry: ['src/index.mjs', 'src/debug.mjs'],
   clean: true,
   minify: true,
   target: 'es2022',

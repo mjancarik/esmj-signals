@@ -1,5 +1,14 @@
 import { Observable, Observer } from '@esmj/observable';
 
+const RX_TYPE = Symbol('@esmj/signals:type');
+const RX_DEBUG_NAME = Symbol('@esmj/signals:name');
+
+let debugHooks = null;
+
+function setDebugHooks(hooks) {
+  debugHooks = hooks;
+}
+
 let context = null;
 let batchDepth = 0;
 let batchQueue = new Set();
@@ -66,8 +75,8 @@ function batch(callback) {
   }
 }
 
-const INTERNAL_OBSERVABLE = Symbol('internal observable');
-const ORIGINAL_FUNCTION = Symbol('original function');
+const INTERNAL_OBSERVABLE = Symbol('@esmj/signals:internal observable');
+const ORIGINAL_FUNCTION = Symbol('@esmj/signals:original function');
 
 class Watcher extends Observable {
   #pendings = new Set();
@@ -188,7 +197,7 @@ function unwatch(signal) {
   return w.unwatch(signal);
 }
 
-const NO_ERROR = Symbol('no error');
+const NO_ERROR = Symbol('@esmj/signals:no error');
 
 class Computed extends Observer {
   #dirty = true;
@@ -208,8 +217,12 @@ class Computed extends Observer {
     this.#options = options;
 
     this.debug = options?.debug;
+    this[RX_TYPE] = 'computed';
+    this[RX_DEBUG_NAME] = options?.debug ?? null;
 
     this.get = this.get.bind(this);
+
+    debugHooks?.onComputedCreate?.(this);
   }
 
   #clearContextDependencies() {
@@ -231,6 +244,15 @@ class Computed extends Observer {
 
   getRevision() {
     return this.#revision;
+  }
+
+  getDebugInfo() {
+    return {
+      name: this[RX_DEBUG_NAME],
+      dirty: this.#dirty,
+      revision: this.#revision,
+      sourceDependencies: [...this.#sourceRevisions.keys()],
+    };
   }
 
   #needsRecompute() {
@@ -307,6 +329,8 @@ class Computed extends Observer {
     this.#dirty = false;
     this.#error = NO_ERROR;
 
+    debugHooks?.onComputedRun?.(this);
+
     this.#clearContextDependencies();
     this.#context.sourceRevisions.clear();
 
@@ -361,13 +385,14 @@ function computed(callback, options) {
 
 function effect(callback, options) {
   let destructor;
+  const { debug, ...restOptions } = options ?? {};
 
   let c = computed(
     () => {
       destructor?.();
       destructor = callback();
     },
-    { equals: () => false, debug: 'effect', ...options },
+    { equals: () => false, ...restOptions },
   );
   c.get();
 
@@ -380,6 +405,11 @@ function effect(callback, options) {
   };
 
   dispose[Symbol.dispose] = dispose;
+  dispose[RX_TYPE] = 'effect';
+  dispose[RX_DEBUG_NAME] = debug ?? null;
+  dispose.__RX_COMPUTED__ = c;
+
+  debugHooks?.onEffectCreate?.(dispose);
 
   return dispose;
 }
@@ -408,8 +438,11 @@ function createSignal(value, options = {}) {
 
   function set(_value) {
     if (!equals(value, _value)) {
+      const prev = value;
       value = _value;
       revision++;
+
+      debugHooks?.onSignalSet?.(signal, prev, _value);
 
       if (batchDepth > 0) {
         batchQueue.add(observable);
@@ -431,7 +464,11 @@ function createSignal(value, options = {}) {
     peek,
     getRevision,
     [INTERNAL_OBSERVABLE]: observable,
+    [RX_TYPE]: 'signal',
+    [RX_DEBUG_NAME]: options?.debug ?? null,
   };
+
+  debugHooks?.onSignalCreate?.(signal);
 
   return signal;
 }
@@ -452,4 +489,7 @@ export {
   batch,
   onFlush,
   afterFlush,
+  setDebugHooks,
+  RX_TYPE,
+  RX_DEBUG_NAME,
 };
