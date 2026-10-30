@@ -563,7 +563,7 @@ This library follows the API shape and semantics of the [TC39 Signals proposal](
 | `createWatcher` | Create a custom watcher |
 | `onFlush` | Register a one-shot post-flush callback |
 | `afterFlush` | Returns a promise that resolves after flush |
-| `setDebugHooks` | Register lifecycle hooks for debug tooling |
+| `setDebugHooks` | Register lifecycle hooks for debug tooling (hooks must not throw) |
 | `RX_TYPE` | Symbol identifying primitive type (`'signal'`\|`'computed'`\|`'effect'`) |
 | `RX_DEBUG_NAME` | Symbol carrying the `debug` label |
 
@@ -590,6 +590,10 @@ installDebug();
 // Or silence auto-logging while keeping the formatter and window.__RX__
 installDebug({ log: false });
 ```
+
+### Hooks must not throw
+
+Debug hooks passed to `setDebugHooks` are called synchronously and are not guarded. A hook that throws propagates its error to the caller and can leave reactive state inconsistent. For example, `onSignalSet` runs after the value is assigned but before observers are notified, so a throw leaves the signal updated while effects are never invalidated. Catch errors inside your hooks.
 
 ### `debug` option
 

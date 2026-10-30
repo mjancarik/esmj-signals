@@ -18,10 +18,11 @@ let flushCallbacks = [];
 function untrack(callback) {
   const prevContext = context;
   context = null;
-  const result = callback();
-  context = prevContext;
-
-  return result;
+  try {
+    return callback();
+  } finally {
+    context = prevContext;
+  }
 }
 
 function flushPending() {
