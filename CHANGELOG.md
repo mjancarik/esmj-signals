@@ -1,3 +1,9 @@
+## <small>0.4.1 (2026-10-30)</small>
+
+* fix: 🐛 restore tracking context when untrack callback throws ([1e0de31](https://github.com/mjancarik/esmj-signals/commit/1e0de31))
+
+
+
 ## 0.4.0 (2026-04-02)
 
 * ci: 🎡 remove vitest ([152c2d3](https://github.com/mjancarik/esmj-signals/commit/152c2d3))
