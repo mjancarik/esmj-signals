@@ -265,6 +265,11 @@ export declare const RX_DEBUG_NAME: unique symbol;
 /**
  * Lifecycle hooks used by debug tooling.
  * All callbacks are optional.
+ *
+ * Hooks must not throw. Hooks are called synchronously and are not guarded:
+ * a thrown error propagates to the caller and can leave reactive state
+ * inconsistent (for example, `onSignalSet` runs after the signal value is
+ * assigned but before observers are notified, so a throw skips invalidation).
  */
 export interface DebugHooks {
   onSignalCreate?: (signal: Signal<unknown>) => void;
